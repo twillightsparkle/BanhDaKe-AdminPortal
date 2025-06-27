@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: Number(process.env.PORT) || 5173,
+    allowedHosts: ['banhdake-adminportal.onrender.com', 'localhost'],
   },
   preview: {
     host: '0.0.0.0',
