@@ -7,6 +7,7 @@ import AddProduct from './components/AddProduct';
 import ManageProducts from './components/ManageProducts';
 import Orders from './components/Orders';
 import StockManagement from './components/StockManagement';
+import ShippingManagement from './components/ShippingManagement';
 import Navbar from './components/Navbar';
 import './App.css';
 
@@ -84,6 +85,14 @@ const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <StockManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/shipping"
+        element={
+          <ProtectedRoute>
+            <ShippingManagement />
           </ProtectedRoute>
         }
       />

@@ -11,7 +11,7 @@ const StockManagement: React.FC = () => {
 
   const filteredAndSortedProducts = products
     .filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      product.name.en.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       switch (sortBy) {
@@ -21,7 +21,7 @@ const StockManagement: React.FC = () => {
           return (a.stock < LOW_STOCK_THRESHOLD ? 0 : 1) - (b.stock < LOW_STOCK_THRESHOLD ? 0 : 1);
         case 'name':
         default:
-          return a.name.localeCompare(b.name);
+          return a.name.en.localeCompare(b.name.en);
       }
     });
 
@@ -76,10 +76,11 @@ const StockManagement: React.FC = () => {
       {lowStockProducts.length > 0 && (
         <div className="alert alert-warning">
           <h3>⚠️ Low Stock Alert</h3>
-          <p>{lowStockProducts.length} product(s) are running low on stock (less than {LOW_STOCK_THRESHOLD} units):</p>          <div className="low-stock-list">
+          <p>{lowStockProducts.length} product(s) are running low on stock (less than {LOW_STOCK_THRESHOLD} units):</p>          
+          <div className="low-stock-list">
             {lowStockProducts.map(product => (
               <span key={product._id} className="low-stock-item">
-                {product.name} ({product.stock} left)
+                {product.name.en} ({product.stock} left)
               </span>
             ))}
           </div>
@@ -149,7 +150,7 @@ const StockManagement: React.FC = () => {
             {filteredAndSortedProducts.map((product) => (
               <tr key={product._id} className={product.stock < LOW_STOCK_THRESHOLD ? 'low-stock-row' : ''}>
                 <td className="product-info">
-                  <div className="product-name">{product.name}</div>
+                  <div className="product-name">{product.name.en}</div>
                   <div className="product-price">${product.price.toFixed(2)}</div>
                 </td>
                 <td className="stock-level">

@@ -1,5 +1,5 @@
 import { apiRequest, API_CONFIG } from '../config/api';
-import type { Product } from '../types';
+import type { Product, ShippingFee } from '../types';
 
 // Auth API services
 export const authService = {
@@ -91,5 +91,53 @@ export const orderService = {
   // Get order statistics
   getOrderStats: async () => {
     return apiRequest(`${API_CONFIG.ENDPOINTS.ORDERS}/stats/summary`);
+  },
+};
+
+// Shipping Fee API services
+export const shippingService = {
+  // Get all shipping fees
+  getAllShippingFees: async (): Promise<ShippingFee[]> => {
+    const response = await apiRequest(`${API_CONFIG.ENDPOINTS.SHIPPING}/admin`);
+    return response.data || [];
+  },
+
+  // Get shipping fee by ID
+  getShippingFeeById: async (id: string): Promise<ShippingFee> => {
+    const response = await apiRequest(`${API_CONFIG.ENDPOINTS.SHIPPING}/admin/${id}`);
+    return response.data;
+  },
+
+  // Create new shipping fee
+  createShippingFee: async (shippingData: Omit<ShippingFee, '_id' | 'createdAt' | 'updatedAt'>): Promise<ShippingFee> => {
+    const response = await apiRequest(`${API_CONFIG.ENDPOINTS.SHIPPING}/admin`, {
+      method: 'POST',
+      body: JSON.stringify(shippingData),
+    });
+    return response.data;
+  },
+
+  // Update shipping fee
+  updateShippingFee: async (id: string, shippingData: Partial<ShippingFee>): Promise<ShippingFee> => {
+    const response = await apiRequest(`${API_CONFIG.ENDPOINTS.SHIPPING}/admin/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(shippingData),
+    });
+    return response.data;
+  },
+
+  // Delete shipping fee
+  deleteShippingFee: async (id: string): Promise<void> => {
+    await apiRequest(`${API_CONFIG.ENDPOINTS.SHIPPING}/admin/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Toggle active status
+  toggleShippingFeeStatus: async (id: string): Promise<ShippingFee> => {
+    const response = await apiRequest(`${API_CONFIG.ENDPOINTS.SHIPPING}/admin/${id}/toggle`, {
+      method: 'PATCH',
+    });
+    return response.data;
   },
 };

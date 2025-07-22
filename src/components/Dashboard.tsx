@@ -56,7 +56,7 @@ const Dashboard: React.FC = () => {
             <ul>
               {lowStockProducts.map(product => (
                 <li key={product._id}>
-                  {product.name} - Only {product.stock} left
+                  {product.name.en} - Only {product.stock} left
                 </li>
               ))}
             </ul>

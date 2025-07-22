@@ -1,13 +1,23 @@
+export type LocalizedString = {
+  en: string;
+  vi: string;
+};
+
+export type ProductSpecification = {
+  key: LocalizedString;
+  value: LocalizedString;
+};
+
 export interface Product {
   _id: string; // MongoDB ObjectId as string
-  name: string;
+  name: LocalizedString;
   price: number;
   image: string;
   images: string[];
-  shortDescription: string;
-  detailDescription: string;
+  shortDescription: LocalizedString;
+  detailDescription: LocalizedString;
   sizes: string[];
-  specifications: Record<string, string>;
+  specifications: ProductSpecification[];
   inStock: boolean;
   stock: number;
   createdAt: string; // MongoDB timestamps as strings
@@ -59,3 +69,30 @@ export interface LoginResponse {
     role: string;
   };
 }
+
+// Utility functions for working with localized strings
+export const getLocalizedString = (
+  localizedString: LocalizedString, 
+  currentLanguage: string = 'en'
+): string => {
+  return localizedString[currentLanguage as keyof LocalizedString] || localizedString.en;
+};
+
+// Helper function to create a localized string
+export const createLocalizedString = (en: string, vi: string): LocalizedString => ({
+  en,
+  vi,
+});
+
+// Shipping Fee types
+export interface ShippingFee {
+  _id: string;
+  country: string;
+  baseFee: number;
+  perKgRate: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

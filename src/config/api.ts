@@ -6,6 +6,7 @@ export const API_CONFIG = {
     PRODUCTS: '/products',
     ORDERS: '/orders',
     AUTH: '/auth',
+    SHIPPING: '/shipping',
     HEALTH: '/health'
   }
 };

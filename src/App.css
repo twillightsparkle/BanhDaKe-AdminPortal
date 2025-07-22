@@ -451,10 +451,41 @@ body {
   margin: 0 auto;
 }
 
+.language-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.language-tabs button {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #6b7280;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.language-tabs button:hover {
+  color: #10b981;
+}
+
+.language-tabs button.active {
+  color: #10b981;
+  border-bottom-color: #10b981;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+}
+
+.form-row.triple {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .form-group {
@@ -466,6 +497,13 @@ body {
   margin-bottom: 6px;
   font-weight: 500;
   color: #374151;
+}
+
+.form-help {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
 .form-group input,
@@ -1232,5 +1270,197 @@ body {
 
   .main-content {
     width: 100%;
+  }
+}
+
+/* Shipping Management Styles */
+.shipping-fees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.shipping-fee-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.shipping-fee-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.shipping-fee-card.inactive {
+  opacity: 0.7;
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.fee-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.country-code {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e293b;
+  margin: 0;
+  font-family: monospace;
+}
+
+.fee-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-badge.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.fee-details {
+  margin-bottom: 20px;
+}
+
+.fee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fee-item:last-child {
+  border-bottom: none;
+}
+
+.fee-label {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.fee-value {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 16px;
+  font-family: monospace;
+}
+
+.fee-calculation {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #3b82f6;
+}
+
+.fee-calculation small {
+  color: #64748b;
+  font-style: italic;
+  font-size: 12px;
+}
+
+.fee-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.fee-meta {
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.shipping-form {
+  padding: 0 24px 24px;
+}
+
+.shipping-form .form-row {
+  margin-bottom: 20px;
+}
+
+.shipping-form .form-group {
+  margin-bottom: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+  grid-column: 1 / -1;
+}
+
+.empty-state h3 {
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+/* Checkbox styling for shipping form */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+.checkmark {
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .shipping-fees-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .fee-actions {
+    flex-direction: column;
+  }
+  
+  .shipping-form .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .modal-overlay {
+    padding: 10px;
   }
 }

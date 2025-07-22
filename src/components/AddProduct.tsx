@@ -1,19 +1,38 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
+import { createLocalizedString } from '../types';
+import '../styles/specifications.css';
+
+interface SpecificationItem {
+  keyEn: string;
+  keyVi: string;
+  valueEn: string;
+  valueVi: string;
+}
 
 const AddProduct: React.FC = () => {
-  const { addProduct } = useAdmin();  const [formData, setFormData] = useState({
-    name: '',
+  const { addProduct } = useAdmin();
+
+  const [formData, setFormData] = useState({
+    nameEn: '',
+    nameVi: '',
     price: '',
-    shortDescription: '',
-    detailDescription: '',
+    shortDescriptionEn: '',
+    shortDescriptionVi: '',
+    detailDescriptionEn: '',
+    detailDescriptionVi: '',
     image: '',
     images: '', // Add images field for multiple URLs
     stock: '',
     inStock: true,
-    sizes: '',
-    specifications: ''
+    sizes: ''
   });
+
+  const [specifications, setSpecifications] = useState<SpecificationItem[]>([
+    { keyEn: '', keyVi: '', valueEn: '', valueVi: '' }
+  ]);
+
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'vi'>('en');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -27,19 +46,39 @@ const AddProduct: React.FC = () => {
     }
   };
 
+  const handleSpecificationChange = (index: number, field: keyof SpecificationItem, value: string) => {
+    setSpecifications(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const addSpecification = () => {
+    setSpecifications(prev => [...prev, { keyEn: '', keyVi: '', valueEn: '', valueVi: '' }]);
+  };
+
+  const removeSpecification = (index: number) => {
+    if (specifications.length > 1) {
+      setSpecifications(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    try {      // Parse sizes and specifications
+    try {
+      // Parse sizes and specifications
       const sizesArray = formData.sizes.split(',').map(size => size.trim()).filter(size => size);
-      const specificationsObj: Record<string, string> = {};
-      formData.specifications.split('\n').forEach(line => {
-        const [key, ...valueParts] = line.split(':');
-        if (key && valueParts.length > 0) {
-          specificationsObj[key.trim()] = valueParts.join(':').trim();
-        }
-      });
+      
+      // Convert specifications to the required format
+      const specificationsArray = specifications
+        .filter(spec => spec.keyEn.trim() || spec.keyVi.trim()) // Only include specifications with at least one key
+        .map(spec => ({
+          key: createLocalizedString(spec.keyEn || spec.keyVi, spec.keyVi || spec.keyEn),
+          value: createLocalizedString(spec.valueEn || spec.valueVi, spec.valueVi || spec.valueEn)
+        }));
 
       // Parse images array from textarea (one URL per line)
       const imagesArray = formData.images
@@ -51,30 +90,36 @@ const AddProduct: React.FC = () => {
       const mainImage = imagesArray.length > 0 ? imagesArray[0] : formData.image;
 
       addProduct({
-        name: formData.name,
+        name: createLocalizedString(formData.nameEn, formData.nameVi),
         price: parseFloat(formData.price),
-        shortDescription: formData.shortDescription,
-        detailDescription: formData.detailDescription,
+        shortDescription: createLocalizedString(formData.shortDescriptionEn, formData.shortDescriptionVi),
+        detailDescription: createLocalizedString(formData.detailDescriptionEn, formData.detailDescriptionVi),
         image: mainImage,
         images: imagesArray.length > 0 ? imagesArray : (formData.image ? [formData.image] : []),
         stock: parseInt(formData.stock),
         inStock: formData.inStock,
         sizes: sizesArray,
-        specifications: specificationsObj
+        specifications: specificationsArray
       });
 
-      setSuccess(true);      setFormData({
-        name: '',
+      setSuccess(true);
+      setFormData({
+        nameEn: '',
+        nameVi: '',
         price: '',
-        shortDescription: '',
-        detailDescription: '',
+        shortDescriptionEn: '',
+        shortDescriptionVi: '',
+        detailDescriptionEn: '',
+        detailDescriptionVi: '',
         image: '',
         images: '',
         stock: '',
         inStock: true,
-        sizes: '',
-        specifications: ''
+        sizes: ''
       });
+      
+      // Reset specifications
+      setSpecifications([{ keyEn: '', keyVi: '', valueEn: '', valueVi: '' }]);
 
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
@@ -98,17 +143,36 @@ const AddProduct: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="product-form">
+        <div className="language-tabs">
+          <button 
+            type="button" 
+            className={currentLanguage === 'en' ? 'active' : ''}
+            onClick={() => setCurrentLanguage('en')}
+          >
+            English
+          </button>
+          <button 
+            type="button" 
+            className={currentLanguage === 'vi' ? 'active' : ''}
+            onClick={() => setCurrentLanguage('vi')}
+          >
+            Vietnamese
+          </button>
+        </div>
+
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="name">Product Name *</label>
+            <label htmlFor={`name${currentLanguage === 'en' ? 'En' : 'Vi'}`}>
+              Product Name ({currentLanguage === 'en' ? 'English' : 'Vietnamese'}) *
+            </label>
             <input
               type="text"
-              id="name"
-              name="name"
-              value={formData.name}
+              id={`name${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+              name={`name${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+              value={currentLanguage === 'en' ? formData.nameEn : formData.nameVi}
               onChange={handleChange}
               required
-              placeholder="Enter product name"
+              placeholder={`Enter product name in ${currentLanguage === 'en' ? 'English' : 'Vietnamese'}`}
             />
           </div>
 
@@ -126,27 +190,35 @@ const AddProduct: React.FC = () => {
               placeholder="0.00"
             />
           </div>
-        </div>        <div className="form-group">
-          <label htmlFor="shortDescription">Short Description *</label>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor={`shortDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}>
+            Short Description ({currentLanguage === 'en' ? 'English' : 'Vietnamese'}) *
+          </label>
           <input
             type="text"
-            id="shortDescription"
-            name="shortDescription"
-            value={formData.shortDescription}
+            id={`shortDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+            name={`shortDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+            value={currentLanguage === 'en' ? formData.shortDescriptionEn : formData.shortDescriptionVi}
             onChange={handleChange}
             required
-            placeholder="Brief description for product listings"
+            placeholder={`Brief description in ${currentLanguage === 'en' ? 'English' : 'Vietnamese'}`}
             maxLength={100}
           />
-        </div>        <div className="form-group">
-          <label htmlFor="detailDescription">Detail Description *</label>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor={`detailDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}>
+            Detail Description ({currentLanguage === 'en' ? 'English' : 'Vietnamese'}) *
+          </label>
           <textarea
-            id="detailDescription"
-            name="detailDescription"
-            value={formData.detailDescription}
+            id={`detailDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+            name={`detailDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+            value={currentLanguage === 'en' ? formData.detailDescriptionEn : formData.detailDescriptionVi}
             onChange={handleChange}
             required
-            placeholder="Detailed product description"
+            placeholder={`Detailed product description in ${currentLanguage === 'en' ? 'English' : 'Vietnamese'}`}
             rows={4}
           />
         </div>
@@ -207,15 +279,79 @@ const AddProduct: React.FC = () => {
         </div>
 
         <div className="form-group">
-          <label htmlFor="specifications">Specifications</label>
-          <textarea
-            id="specifications"
-            name="specifications"
-            value={formData.specifications}
-            onChange={handleChange}
-            placeholder="Chất liệu upper: Canvas và suede&#10;Chất liệu đế: Vulcanized rubber&#10;Công nghệ: Waffle outsole"
-            rows={4}
-          />
+          <label>Specifications</label>
+          <div className="specifications-container">
+            {specifications.map((spec, index) => (
+              <div key={index} className="specification-item">
+                <div className="specification-header">
+                  <span>Specification {index + 1}</span>
+                  <div className="specification-actions">
+                    {specifications.length > 1 && (
+                      <button 
+                        type="button" 
+                        className="remove-spec-btn"
+                        onClick={() => removeSpecification(index)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="specification-fields">
+                  <div className="spec-row">
+                    <div className="spec-field">
+                      <label>Key (English)</label>
+                      <input
+                        type="text"
+                        value={spec.keyEn}
+                        onChange={(e) => handleSpecificationChange(index, 'keyEn', e.target.value)}
+                        placeholder="e.g., Material"
+                      />
+                    </div>
+                    <div className="spec-field">
+                      <label>Key (Vietnamese)</label>
+                      <input
+                        type="text"
+                        value={spec.keyVi}
+                        onChange={(e) => handleSpecificationChange(index, 'keyVi', e.target.value)}
+                        placeholder="e.g., Chất liệu"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="spec-row">
+                    <div className="spec-field">
+                      <label>Value (English)</label>
+                      <input
+                        type="text"
+                        value={spec.valueEn}
+                        onChange={(e) => handleSpecificationChange(index, 'valueEn', e.target.value)}
+                        placeholder="e.g., Canvas and suede"
+                      />
+                    </div>
+                    <div className="spec-field">
+                      <label>Value (Vietnamese)</label>
+                      <input
+                        type="text"
+                        value={spec.valueVi}
+                        onChange={(e) => handleSpecificationChange(index, 'valueVi', e.target.value)}
+                        placeholder="e.g., Canvas và da lộn"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <button 
+              type="button" 
+              className="add-spec-btn"
+              onClick={addSpecification}
+            >
+              + Add Specification
+            </button>
+          </div>
         </div>
 
         {formData.image && (

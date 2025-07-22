@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import type { Product } from '../types';
+import { getLocalizedString, createLocalizedString } from '../types';
+import '../styles/specifications.css';
+
+interface SpecificationItem {
+  keyEn: string;
+  keyVi: string;
+  valueEn: string;
+  valueVi: string;
+}
 
 interface EditProductModalProps {
   product: Product;
@@ -9,17 +18,33 @@ interface EditProductModalProps {
 }
 
 const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, onSave }) => {
+  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'vi'>('en');
   const [formData, setFormData] = useState({
-    name: product.name,
+    nameEn: product.name.en,
+    nameVi: product.name.vi,
     price: product.price.toString(),
-    shortDescription: product.shortDescription,
-    detailDescription: product.detailDescription,
+    shortDescriptionEn: product.shortDescription.en,
+    shortDescriptionVi: product.shortDescription.vi,
+    detailDescriptionEn: product.detailDescription.en,
+    detailDescriptionVi: product.detailDescription.vi,
     image: product.image,
     images: product.images?.join('\n') || product.image || '', // Show all images, one per line
     stock: product.stock.toString(),
     inStock: product.inStock,
-    sizes: product.sizes.join(', '),
-    specifications: Object.entries(product.specifications).map(([key, value]) => `${key}: ${value}`).join('\n')
+    sizes: product.sizes.join(', ')
+  });
+
+  // Initialize specifications from product data
+  const [specifications, setSpecifications] = useState<SpecificationItem[]>(() => {
+    if (product.specifications && product.specifications.length > 0) {
+      return product.specifications.map(spec => ({
+        keyEn: spec.key.en,
+        keyVi: spec.key.vi,
+        valueEn: spec.value.en,
+        valueVi: spec.value.vi
+      }));
+    }
+    return [{ keyEn: '', keyVi: '', valueEn: '', valueVi: '' }];
   });
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -30,18 +55,37 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
+
+  const handleSpecificationChange = (index: number, field: keyof SpecificationItem, value: string) => {
+    setSpecifications(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const addSpecification = () => {
+    setSpecifications(prev => [...prev, { keyEn: '', keyVi: '', valueEn: '', valueVi: '' }]);
+  };
+
+  const removeSpecification = (index: number) => {
+    if (specifications.length > 1) {
+      setSpecifications(prev => prev.filter((_, i) => i !== index));
+    }
+  };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     // Parse sizes and specifications
     const sizesArray = formData.sizes.split(',').map(size => size.trim()).filter(size => size);
-    const specificationsObj: Record<string, string> = {};
-    formData.specifications.split('\n').forEach(line => {
-      const [key, ...valueParts] = line.split(':');
-      if (key && valueParts.length > 0) {
-        specificationsObj[key.trim()] = valueParts.join(':').trim();
-      }
-    });
+    
+    // Convert specifications to the required format
+    const specificationsArray = specifications
+      .filter(spec => spec.keyEn.trim() || spec.keyVi.trim()) // Only include specifications with at least one key
+      .map(spec => ({
+        key: createLocalizedString(spec.keyEn || spec.keyVi, spec.keyVi || spec.keyEn),
+        value: createLocalizedString(spec.valueEn || spec.valueVi, spec.valueVi || spec.valueEn)
+      }));
 
     // Parse images array from textarea (one URL per line)
     const imagesArray = formData.images
@@ -53,16 +97,16 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
     const mainImage = imagesArray.length > 0 ? imagesArray[0] : formData.image;
 
     onSave(product._id, {
-      name: formData.name,
+      name: createLocalizedString(formData.nameEn, formData.nameVi),
       price: parseFloat(formData.price),
-      shortDescription: formData.shortDescription,
-      detailDescription: formData.detailDescription,
+      shortDescription: createLocalizedString(formData.shortDescriptionEn, formData.shortDescriptionVi),
+      detailDescription: createLocalizedString(formData.detailDescriptionEn, formData.detailDescriptionVi),
       image: mainImage,
       images: imagesArray.length > 0 ? imagesArray : [formData.image],
       stock: parseInt(formData.stock),
       inStock: formData.inStock,
       sizes: sizesArray,
-      specifications: specificationsObj
+      specifications: specificationsArray
     });
     onClose();
   };
@@ -76,14 +120,33 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
         </div>
 
         <form onSubmit={handleSubmit} className="product-form">
+          <div className="language-tabs">
+            <button 
+              type="button" 
+              className={currentLanguage === 'en' ? 'active' : ''}
+              onClick={() => setCurrentLanguage('en')}
+            >
+              English
+            </button>
+            <button 
+              type="button" 
+              className={currentLanguage === 'vi' ? 'active' : ''}
+              onClick={() => setCurrentLanguage('vi')}
+            >
+              Vietnamese
+            </button>
+          </div>
+          
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-name">Product Name</label>
+              <label htmlFor={`edit-name-${currentLanguage}`}>
+                Product Name ({currentLanguage === 'en' ? 'English' : 'Vietnamese'})
+              </label>
               <input
                 type="text"
-                id="edit-name"
-                name="name"
-                value={formData.name}
+                id={`edit-name-${currentLanguage}`}
+                name={`name${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+                value={currentLanguage === 'en' ? formData.nameEn : formData.nameVi}
                 onChange={handleChange}
                 required
               />
@@ -102,22 +165,30 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                 step="0.01"
               />
             </div>
-          </div>          <div className="form-group">
-            <label htmlFor="edit-shortDescription">Short Description</label>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor={`edit-shortDescription-${currentLanguage}`}>
+              Short Description ({currentLanguage === 'en' ? 'English' : 'Vietnamese'})
+            </label>
             <input
               type="text"
-              id="edit-shortDescription"
-              name="shortDescription"
-              value={formData.shortDescription}
+              id={`edit-shortDescription-${currentLanguage}`}
+              name={`shortDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+              value={currentLanguage === 'en' ? formData.shortDescriptionEn : formData.shortDescriptionVi}
               onChange={handleChange}
               required
             />
-          </div>          <div className="form-group">
-            <label htmlFor="edit-detailDescription">Detail Description</label>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor={`edit-detailDescription-${currentLanguage}`}>
+              Detail Description ({currentLanguage === 'en' ? 'English' : 'Vietnamese'})
+            </label>
             <textarea
-              id="edit-detailDescription"
-              name="detailDescription"
-              value={formData.detailDescription}
+              id={`edit-detailDescription-${currentLanguage}`}
+              name={`detailDescription${currentLanguage === 'en' ? 'En' : 'Vi'}`}
+              value={currentLanguage === 'en' ? formData.detailDescriptionEn : formData.detailDescriptionVi}
               onChange={handleChange}
               required
               rows={3}
@@ -179,15 +250,79 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
           </div>
 
           <div className="form-group">
-            <label htmlFor="edit-specifications">Specifications (one per line: key: value)</label>
-            <textarea
-              id="edit-specifications"
-              name="specifications"
-              value={formData.specifications}
-              onChange={handleChange}
-              rows={4}
-              placeholder="Chất liệu upper: Canvas&#10;Chất liệu đế: Rubber&#10;Kiểu dáng: Low-top"
-            />
+            <label>Specifications</label>
+            <div className="specifications-container">
+              {specifications.map((spec, index) => (
+                <div key={index} className="specification-item">
+                  <div className="specification-header">
+                    <span>Specification {index + 1}</span>
+                    <div className="specification-actions">
+                      {specifications.length > 1 && (
+                        <button 
+                          type="button" 
+                          className="remove-spec-btn"
+                          onClick={() => removeSpecification(index)}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="specification-fields">
+                    <div className="spec-row">
+                      <div className="spec-field">
+                        <label>Key (English)</label>
+                        <input
+                          type="text"
+                          value={spec.keyEn}
+                          onChange={(e) => handleSpecificationChange(index, 'keyEn', e.target.value)}
+                          placeholder="e.g., Material"
+                        />
+                      </div>
+                      <div className="spec-field">
+                        <label>Key (Vietnamese)</label>
+                        <input
+                          type="text"
+                          value={spec.keyVi}
+                          onChange={(e) => handleSpecificationChange(index, 'keyVi', e.target.value)}
+                          placeholder="e.g., Chất liệu"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="spec-row">
+                      <div className="spec-field">
+                        <label>Value (English)</label>
+                        <input
+                          type="text"
+                          value={spec.valueEn}
+                          onChange={(e) => handleSpecificationChange(index, 'valueEn', e.target.value)}
+                          placeholder="e.g., Canvas and suede"
+                        />
+                      </div>
+                      <div className="spec-field">
+                        <label>Value (Vietnamese)</label>
+                        <input
+                          type="text"
+                          value={spec.valueVi}
+                          onChange={(e) => handleSpecificationChange(index, 'valueVi', e.target.value)}
+                          placeholder="e.g., Canvas và da lộn"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              <button 
+                type="button" 
+                className="add-spec-btn"
+                onClick={addSpecification}
+              >
+                + Add Specification
+              </button>
+            </div>
           </div>
 
           <div className="modal-actions">
@@ -210,8 +345,10 @@ const ManageProducts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.shortDescription.toLowerCase().includes(searchTerm.toLowerCase())
+    getLocalizedString(product.name, 'en').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getLocalizedString(product.name, 'vi').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getLocalizedString(product.shortDescription, 'en').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    getLocalizedString(product.shortDescription, 'vi').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleEdit = (product: Product) => {
@@ -254,15 +391,15 @@ const ManageProducts: React.FC = () => {
         {filteredProducts.map((product) => (
           <div key={product._id} className="product-card">            <div className="product-image">
               {product.image ? (
-                <img src={product.image} alt={product.name} />
+                <img src={product.image} alt={getLocalizedString(product.name)} />
               ) : (
                 <div className="no-image">No Image</div>
               )}
             </div>
 
             <div className="product-content">
-              <h3>{product.name}</h3>
-              <p className="product-description">{product.shortDescription}</p>
+              <h3>{getLocalizedString(product.name)}</h3>
+              <p className="product-description">{getLocalizedString(product.shortDescription)}</p>
               <div className="product-details">
                 <span className="product-price">{product.price.toLocaleString('vi-VN')} VNĐ</span>
                 <span className={`product-stock ${product.stock < 5 ? 'low-stock' : ''}`}>
@@ -284,7 +421,7 @@ const ManageProducts: React.FC = () => {
                 Edit
               </button>
               <button 
-                onClick={() => handleDelete(product._id, product.name)}
+                onClick={() => handleDelete(product._id, getLocalizedString(product.name))}
                 className="delete-button"
               >
                 Delete

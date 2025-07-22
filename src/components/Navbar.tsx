@@ -12,6 +12,7 @@ const Navbar: React.FC = () => {
     { path: '/add-product', label: 'Add Product', icon: '➕' },
     { path: '/orders', label: 'Orders', icon: '📋' },
     { path: '/stock', label: 'Stock Management', icon: '📊' },
+    { path: '/shipping', label: 'Shipping Management', icon: '🚚' },
   ];
 
   const handleLogout = () => {
