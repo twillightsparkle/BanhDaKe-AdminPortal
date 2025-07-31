@@ -1,0 +1,130 @@
+/* Stock Management */
+.stock-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+  width: 100%;
+}
+
+.low-stock-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.low-stock-item {
+  background-color: #fef2f2;
+  color: #dc2626;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  border: 1px solid #fecaca;
+}
+
+.stock-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.stock-table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.stock-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stock-table th,
+.stock-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.stock-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.low-stock-row {
+  background-color: #fef2f2;
+}
+
+.stock-number {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.stock-number.low {
+  color: #dc2626;
+}
+
+.status-badge.low-stock {
+  background-color: #dc2626;
+}
+
+.status-badge.medium-stock {
+  background-color: #f59e0b;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.quick-button {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.quick-button.increase {
+  color: #059669;
+  border-color: #059669;
+}
+
+.quick-button.decrease {
+  color: #dc2626;
+  border-color: #dc2626;
+}
+
+.quick-button:hover:not(:disabled) {
+  background-color: #f9fafb;
+}
+
+.quick-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-stock {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.stock-input {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+}

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import { createLocalizedString } from '../types';
-import '../styles/specifications.css';
 
 interface SpecificationItem {
   keyEn: string;
@@ -25,7 +24,8 @@ const AddProduct: React.FC = () => {
     images: '', // Add images field for multiple URLs
     stock: '',
     inStock: true,
-    sizes: ''
+    sizes: '',
+    weight: '' // in grams
   });
 
   const [specifications, setSpecifications] = useState<SpecificationItem[]>([
@@ -99,7 +99,8 @@ const AddProduct: React.FC = () => {
         stock: parseInt(formData.stock),
         inStock: formData.inStock,
         sizes: sizesArray,
-        specifications: specificationsArray
+        specifications: specificationsArray,
+        weight: parseInt(formData.weight) || 0, // Default to 0 if not provided
       });
 
       setSuccess(true);
@@ -115,7 +116,8 @@ const AddProduct: React.FC = () => {
         images: '',
         stock: '',
         inStock: true,
-        sizes: ''
+        sizes: '',
+        weight: ''
       });
       
       // Reset specifications
@@ -249,6 +251,21 @@ const AddProduct: React.FC = () => {
               min="0"
               placeholder="0"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="weight">Weight (grams) *</label>
+            <input
+              type="number"
+              id="weight"
+              name="weight"
+              value={formData.weight}
+              onChange={handleChange}
+              required
+              min="0"
+              placeholder="0"
+            />
+            <small className="form-help">Product weight in grams (used for shipping calculations)</small>
           </div>
         </div>
 

@@ -20,6 +20,7 @@ export interface Product {
   specifications: ProductSpecification[];
   inStock: boolean;
   stock: number;
+  weight: number; // in grams
   createdAt: string; // MongoDB timestamps as strings
   updatedAt: string;
 }
@@ -28,6 +29,9 @@ export interface Order {
   _id: string; // MongoDB ObjectId as string
   products: OrderItem[];
   total: number;
+  shippingFee: number;
+  shippingCountry: string;
+  totalWeight: number;
   customerInfo: CustomerInfo;
   status: OrderStatus;
   createdAt: string; // MongoDB timestamps as strings

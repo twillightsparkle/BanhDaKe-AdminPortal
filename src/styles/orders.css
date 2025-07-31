@@ -1,0 +1,174 @@
+/* Orders Table */
+.orders-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.status-filter,
+.sort-select {
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.orders-stats {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-label {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.orders-table {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.orders-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.orders-table th,
+.orders-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.orders-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.order-id {
+  font-family: monospace;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.customer-name {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.customer-email,
+.customer-phone {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.product-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.product-name {
+  color: #374151;
+}
+
+.product-quantity {
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* Shipping info styles */
+.shipping-info {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.shipping-country {
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.shipping-weight {
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.shipping-fee {
+  color: #059669;
+  font-weight: 600;
+}
+
+/* Total breakdown styles */
+.total-breakdown {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.total-breakdown .subtotal,
+.total-breakdown .shipping {
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.total-breakdown .total {
+  color: #059669;
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 2px;
+  padding-top: 2px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.order-date {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.status-select {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.no-orders {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+  width: 100%;
+}

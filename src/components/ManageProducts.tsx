@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import type { Product } from '../types';
 import { getLocalizedString, createLocalizedString } from '../types';
-import '../styles/specifications.css';
 
 interface SpecificationItem {
   keyEn: string;
@@ -31,7 +30,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
     images: product.images?.join('\n') || product.image || '', // Show all images, one per line
     stock: product.stock.toString(),
     inStock: product.inStock,
-    sizes: product.sizes.join(', ')
+    sizes: product.sizes.join(', '),
+    weight: (product.weight || 0).toString() // Add weight field
   });
 
   // Initialize specifications from product data
@@ -106,7 +106,8 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
       stock: parseInt(formData.stock),
       inStock: formData.inStock,
       sizes: sizesArray,
-      specifications: specificationsArray
+      specifications: specificationsArray,
+      weight: parseInt(formData.weight) || 0 // Add weight to the save data
     });
     onClose();
   };
@@ -220,6 +221,21 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                 required
                 min="0"
               />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="edit-weight">Weight (grams)</label>
+              <input
+                type="number"
+                id="edit-weight"
+                name="weight"
+                value={formData.weight}
+                onChange={handleChange}
+                required
+                min="0"
+                placeholder="0"
+              />
+              <small className="form-help">Product weight in grams (used for shipping calculations)</small>
             </div>
           </div>
 
@@ -404,6 +420,9 @@ const ManageProducts: React.FC = () => {
                 <span className="product-price">{product.price.toLocaleString('vi-VN')} VNĐ</span>
                 <span className={`product-stock ${product.stock < 5 ? 'low-stock' : ''}`}>
                   Stock: {product.stock}
+                </span>
+                <span className="product-weight">
+                  Weight: {product.weight || 0}g
                 </span>
               </div>
               <div className="product-status">

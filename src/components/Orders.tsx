@@ -87,6 +87,14 @@ const Orders: React.FC = () => {
           <span className="stat-label">Completed:</span>
           <span className="stat-value">{orders.filter(o => o.status === 'Completed').length}</span>
         </div>
+        <div className="stat-item">
+          <span className="stat-label">Total Shipping:</span>
+          <span className="stat-value">${orders.reduce((sum, order) => sum + (order.shippingFee || 0), 0).toFixed(2)}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Total Weight:</span>
+          <span className="stat-value">{orders.reduce((sum, order) => sum + (order.totalWeight || 0), 0)}g</span>
+        </div>
       </div>
 
       <div className="orders-table">
@@ -101,6 +109,7 @@ const Orders: React.FC = () => {
                 <th>Order ID</th>
                 <th>Customer</th>
                 <th>Products</th>
+                <th>Shipping</th>
                 <th>Total</th>
                 <th>Status</th>
                 <th>Date</th>
@@ -126,7 +135,18 @@ const Orders: React.FC = () => {
                       </div>
                     ))}
                   </td>
-                  <td className="order-total">{order.total.toLocaleString('vi-VN')} VNĐ</td>
+                  <td className="shipping-info">
+                    <div className="shipping-country">🌍 {order.shippingCountry}</div>
+                    <div className="shipping-weight">⚖️ {order.totalWeight / 1000}kg</div>
+                    <div className="shipping-fee">${(order.shippingFee || 0).toFixed(2)}</div>
+                  </td>
+                  <td className="order-total">
+                    <div className="total-breakdown">
+                      <div className="subtotal">Subtotal: ${order.total.toFixed(2)}</div>
+                      <div className="shipping">Shipping: ${(order.shippingFee || 0).toFixed(2)}</div>
+                      <div className="total">Total: ${(order.total + (order.shippingFee || 0)).toFixed(2)}</div>
+                    </div>
+                  </td>
                   <td>
                     <span 
                       className="status-badge"
