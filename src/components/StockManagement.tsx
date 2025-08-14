@@ -1,17 +1,56 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
+import { getLocalizedString } from '../types';
+
+interface VariationStock {
+  productId: string;
+  variationIndex: number;
+  sizeOptionIndex: number;
+  stock: number;
+  color: string;
+  size: number;
+  price: number;
+  productName: string;
+}
 
 const StockManagement: React.FC = () => {
-  const { products, updateProductStock } = useAdmin();
+  const { products, updateProduct } = useAdmin();
   const [editingStock, setEditingStock] = useState<{ [key: string]: string }>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'stock' | 'lowStock'>('name');
 
   const LOW_STOCK_THRESHOLD = 5;
 
-  const filteredAndSortedProducts = products
-    .filter(product =>
-      product.name.en.toLowerCase().includes(searchTerm.toLowerCase())
+  // Flatten all variations and size options into a manageable list
+  const getAllVariationStocks = (): VariationStock[] => {
+    const result: VariationStock[] = [];
+    
+    products.forEach(product => {
+      product.variations.forEach((variation, variationIndex) => {
+        variation.sizeOptions.forEach((sizeOption, sizeOptionIndex) => {
+          result.push({
+            productId: product._id,
+            variationIndex,
+            sizeOptionIndex,
+            stock: sizeOption.stock,
+            color: getLocalizedString(variation.color),
+            size: sizeOption.size,
+            price: sizeOption.price,
+            productName: getLocalizedString(product.name)
+          });
+        });
+      });
+    });
+    
+    return result;
+  };
+
+  const allVariationStocks = getAllVariationStocks();
+
+  const filteredAndSortedStocks = allVariationStocks
+    .filter(item =>
+      item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.color.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       switch (sortBy) {
@@ -21,48 +60,80 @@ const StockManagement: React.FC = () => {
           return (a.stock < LOW_STOCK_THRESHOLD ? 0 : 1) - (b.stock < LOW_STOCK_THRESHOLD ? 0 : 1);
         case 'name':
         default:
-          return a.name.en.localeCompare(b.name.en);
+          return a.productName.localeCompare(b.productName) || a.color.localeCompare(b.color);
       }
     });
 
-  const lowStockProducts = products.filter(product => product.stock < LOW_STOCK_THRESHOLD);
+  const lowStockItems = allVariationStocks.filter(item => item.stock < LOW_STOCK_THRESHOLD);
+  const totalStock = allVariationStocks.reduce((sum, item) => sum + item.stock, 0);
 
-  const handleStockEdit = (productId: string, currentStock: number) => {
+  const getStockKey = (productId: string, variationIndex: number, sizeOptionIndex: number) => {
+    return `${productId}-${variationIndex}-${sizeOptionIndex}`;
+  };
+
+  const handleStockEdit = (stockKey: string, currentStock: number) => {
     setEditingStock(prev => ({
       ...prev,
-      [productId]: currentStock.toString()
+      [stockKey]: currentStock.toString()
     }));
   };
-  const handleStockSave = (productId: string) => {
-    const newStock = parseInt(editingStock[productId]);
+
+  const handleStockSave = async (stockKey: string, productId: string, variationIndex: number, sizeOptionIndex: number) => {
+    const newStock = parseInt(editingStock[stockKey]);
     if (!isNaN(newStock) && newStock >= 0) {
-      updateProductStock(productId, newStock);
+      // Update the specific size option stock
+      const product = products.find(p => p._id === productId);
+      if (product) {
+        const updatedProduct = { ...product };
+        updatedProduct.variations = [...product.variations];
+        updatedProduct.variations[variationIndex] = { ...product.variations[variationIndex] };
+        updatedProduct.variations[variationIndex].sizeOptions = [...product.variations[variationIndex].sizeOptions];
+        updatedProduct.variations[variationIndex].sizeOptions[sizeOptionIndex] = {
+          ...product.variations[variationIndex].sizeOptions[sizeOptionIndex],
+          stock: newStock
+        };
+        
+        await updateProduct(productId, updatedProduct);
+      }
     }
     setEditingStock(prev => {
       const newState = { ...prev };
-      delete newState[productId];
+      delete newState[stockKey];
       return newState;
     });
   };
 
-  const handleStockCancel = (productId: string) => {
+  const handleStockCancel = (stockKey: string) => {
     setEditingStock(prev => {
       const newState = { ...prev };
-      delete newState[productId];
+      delete newState[stockKey];
       return newState;
     });
   };
 
-  const handleStockChange = (productId: string, value: string) => {
+  const handleStockChange = (stockKey: string, value: string) => {
     setEditingStock(prev => ({
       ...prev,
-      [productId]: value
+      [stockKey]: value
     }));
-  };  const quickUpdate = (productId: string, change: number) => {
+  };
+
+  const quickUpdate = async (productId: string, variationIndex: number, sizeOptionIndex: number, change: number) => {
     const product = products.find(p => p._id === productId);
     if (product) {
-      const newStock = Math.max(0, product.stock + change);
-      updateProductStock(productId, newStock);
+      const currentStock = product.variations[variationIndex].sizeOptions[sizeOptionIndex].stock;
+      const newStock = Math.max(0, currentStock + change);
+      
+      const updatedProduct = { ...product };
+      updatedProduct.variations = [...product.variations];
+      updatedProduct.variations[variationIndex] = { ...product.variations[variationIndex] };
+      updatedProduct.variations[variationIndex].sizeOptions = [...product.variations[variationIndex].sizeOptions];
+      updatedProduct.variations[variationIndex].sizeOptions[sizeOptionIndex] = {
+        ...product.variations[variationIndex].sizeOptions[sizeOptionIndex],
+        stock: newStock
+      };
+      
+      await updateProduct(productId, updatedProduct);
     }
   };
 
@@ -73,16 +144,19 @@ const StockManagement: React.FC = () => {
         <p>Monitor and update product inventory levels</p>
       </div>
 
-      {lowStockProducts.length > 0 && (
+      {lowStockItems.length > 0 && (
         <div className="alert alert-warning">
           <h3>⚠️ Low Stock Alert</h3>
-          <p>{lowStockProducts.length} product(s) are running low on stock (less than {LOW_STOCK_THRESHOLD} units):</p>          
+          <p>{lowStockItems.length} variation(s) are running low on stock (less than {LOW_STOCK_THRESHOLD} units):</p>          
           <div className="low-stock-list">
-            {lowStockProducts.map(product => (
-              <span key={product._id} className="low-stock-item">
-                {product.name.en} ({product.stock} left)
+            {lowStockItems.slice(0, 5).map((item, index) => (
+              <span key={index} className="low-stock-item">
+                {item.productName} - {item.color} (Size {item.size}): {item.stock} left
               </span>
             ))}
+            {lowStockItems.length > 5 && (
+              <span className="low-stock-item">... and {lowStockItems.length - 5} more</span>
+            )}
           </div>
         </div>
       )}
@@ -115,21 +189,21 @@ const StockManagement: React.FC = () => {
         <div className="stat-card">
           <div className="stat-icon">📦</div>
           <div className="stat-content">
-            <h3>{products.length}</h3>
-            <p>Total Products</p>
+            <h3>{allVariationStocks.length}</h3>
+            <p>Total Variations</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">⚠️</div>
           <div className="stat-content">
-            <h3>{lowStockProducts.length}</h3>
+            <h3>{lowStockItems.length}</h3>
             <p>Low Stock Items</p>
           </div>
         </div>
         <div className="stat-card">
           <div className="stat-icon">📊</div>
           <div className="stat-content">
-            <h3>{products.reduce((sum, product) => sum + product.stock, 0)}</h3>
+            <h3>{totalStock}</h3>
             <p>Total Units</p>
           </div>
         </div>
@@ -140,6 +214,9 @@ const StockManagement: React.FC = () => {
           <thead>
             <tr>
               <th>Product</th>
+              <th>Variation</th>
+              <th>Size</th>
+              <th>Price</th>
               <th>Current Stock</th>
               <th>Status</th>
               <th>Quick Actions</th>              
@@ -147,91 +224,102 @@ const StockManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredAndSortedProducts.map((product) => (
-              <tr key={product._id} className={product.stock < LOW_STOCK_THRESHOLD ? 'low-stock-row' : ''}>
-                <td className="product-info">
-                  <div className="product-name">{product.name.en}</div>
-                  <div className="product-price">${product.price.toFixed(2)}</div>
-                </td>
-                <td className="stock-level">
-                  <span className={`stock-number ${product.stock < LOW_STOCK_THRESHOLD ? 'low' : ''}`}>
-                    {product.stock}
-                  </span>
-                </td>
-                <td className="stock-status">
-                  {product.stock < LOW_STOCK_THRESHOLD ? (
-                    <span className="status-badge low-stock">Low Stock</span>
-                  ) : product.stock < 10 ? (
-                    <span className="status-badge medium-stock">Medium</span>
-                  ) : (
-                    <span className="status-badge in-stock">In Stock</span>
-                  )}
-                </td>                
-                <td className="quick-actions">
-                  <button
-                    onClick={() => quickUpdate(product._id, -1)}
-                    className="quick-button decrease"
-                    disabled={product.stock === 0}
-                    title="Decrease by 1"
-                  >
-                    -1
-                  </button>
-                  <button
-                    onClick={() => quickUpdate(product._id, 1)}
-                    className="quick-button increase"
-                    title="Increase by 1"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => quickUpdate(product._id, 10)}
-                    className="quick-button increase"
-                    title="Increase by 10"
-                  >
-                    +10
-                  </button>
-                </td>                
-                <td className="stock-update">
-                  {editingStock[product._id] !== undefined ? (
-                    <div className="edit-stock">
-                      <input
-                        type="number"
-                        value={editingStock[product._id]}
-                        onChange={(e) => handleStockChange(product._id, e.target.value)}
-                        min="0"
-                        className="stock-input"
-                      />
-                      <button
-                        onClick={() => handleStockSave(product._id)}
-                        className="save-button"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        onClick={() => handleStockCancel(product._id)}
-                        className="cancel-button"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
+            {filteredAndSortedStocks.map((item) => {
+              const stockKey = getStockKey(item.productId, item.variationIndex, item.sizeOptionIndex);
+              return (
+                <tr key={stockKey} className={item.stock < LOW_STOCK_THRESHOLD ? 'low-stock-row' : ''}>
+                  <td className="product-info">
+                    <div className="product-name">{item.productName}</div>
+                  </td>
+                  <td className="variation-info">
+                    <div className="variation-color">{item.color}</div>
+                  </td>
+                  <td className="size-info">
+                    <div className="size-number">{item.size}</div>
+                  </td>
+                  <td className="price-info">
+                    <div className="price-number">${item.price.toFixed(2)}</div>
+                  </td>
+                  <td className="stock-level">
+                    <span className={`stock-number ${item.stock < LOW_STOCK_THRESHOLD ? 'low' : ''}`}>
+                      {item.stock}
+                    </span>
+                  </td>
+                  <td className="stock-status">
+                    {item.stock < LOW_STOCK_THRESHOLD ? (
+                      <span className="status-badge low-stock">Low Stock</span>
+                    ) : item.stock < 10 ? (
+                      <span className="status-badge medium-stock">Medium</span>
+                    ) : (
+                      <span className="status-badge in-stock">In Stock</span>
+                    )}
+                  </td>                
+                  <td className="quick-actions">
                     <button
-                      onClick={() => handleStockEdit(product._id, product.stock)}
-                      className="edit-button"
+                      onClick={() => quickUpdate(item.productId, item.variationIndex, item.sizeOptionIndex, -1)}
+                      className="quick-button decrease"
+                      disabled={item.stock === 0}
+                      title="Decrease by 1"
                     >
-                      Edit
+                      -1
                     </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    <button
+                      onClick={() => quickUpdate(item.productId, item.variationIndex, item.sizeOptionIndex, 1)}
+                      className="quick-button increase"
+                      title="Increase by 1"
+                    >
+                      +1
+                    </button>
+                    <button
+                      onClick={() => quickUpdate(item.productId, item.variationIndex, item.sizeOptionIndex, 10)}
+                      className="quick-button increase"
+                      title="Increase by 10"
+                    >
+                      +10
+                    </button>
+                  </td>                
+                  <td className="stock-update">
+                    {editingStock[stockKey] !== undefined ? (
+                      <div className="edit-stock">
+                        <input
+                          type="number"
+                          value={editingStock[stockKey]}
+                          onChange={(e) => handleStockChange(stockKey, e.target.value)}
+                          min="0"
+                          className="stock-input"
+                        />
+                        <button
+                          onClick={() => handleStockSave(stockKey, item.productId, item.variationIndex, item.sizeOptionIndex)}
+                          className="save-button"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => handleStockCancel(stockKey)}
+                          className="cancel-button"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleStockEdit(stockKey, item.stock)}
+                        className="edit-button"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      {filteredAndSortedProducts.length === 0 && (
+      {filteredAndSortedStocks.length === 0 && (
         <div className="no-products">
-          <p>No products found matching your search.</p>
+          <p>No stock items found matching your search.</p>
         </div>
       )}
     </div>
