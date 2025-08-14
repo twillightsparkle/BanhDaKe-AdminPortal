@@ -4,7 +4,17 @@ import { useAdmin } from '../contexts/AdminContext';
 const Dashboard: React.FC = () => {
   const { user, products, orders } = useAdmin();
 
-  const lowStockProducts = products.filter(product => product.stock < 5);
+  // Calculate total stock for each product from variations
+  const productsWithStock = products.map(product => {
+    const totalStock = (product.variations || []).reduce((sum, variation) => 
+      sum + (variation.sizeOptions || []).reduce((sizeSum, sizeOption) => 
+        sizeSum + (sizeOption.stock || 0), 0
+      ), 0
+    );
+    return { ...product, totalStock };
+  });
+
+  const lowStockProducts = productsWithStock.filter(product => product.totalStock < 5);
   const pendingOrders = orders.filter(order => order.status === 'Pending');
   const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
 
@@ -56,7 +66,7 @@ const Dashboard: React.FC = () => {
             <ul>
               {lowStockProducts.map(product => (
                 <li key={product._id}>
-                  {product.name.en} - Only {product.stock} left
+                  {product.name.en} - Only {product.totalStock} left
                 </li>
               ))}
             </ul>
