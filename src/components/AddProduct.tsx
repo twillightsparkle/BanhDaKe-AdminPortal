@@ -362,7 +362,7 @@ const AddProduct: React.FC = () => {
                 </button>
                 <h4>
                   {variation.colorEn || variation.colorVi 
-                    ? `${variation.colorEn || variation.colorVi} Variation` 
+                    ? `${variation.colorEn || variation.colorVi}` 
                     : `Variation ${index + 1}`
                   }
                 </h4>
@@ -468,7 +468,7 @@ const AddProduct: React.FC = () => {
 
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="weight">Weight (grams) *</label>
+            <label htmlFor="weight">Weight (Kilograms) *</label>
             <input
               type="number"
               id="weight"
