@@ -88,6 +88,13 @@ export const orderService = {
     });
   },
 
+  // Delete order
+  deleteOrder: async (id: string) => {
+    return apiRequest(`${API_CONFIG.ENDPOINTS.ORDERS}/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   // Get order statistics
   getOrderStats: async () => {
     return apiRequest(`${API_CONFIG.ENDPOINTS.ORDERS}/stats/summary`);

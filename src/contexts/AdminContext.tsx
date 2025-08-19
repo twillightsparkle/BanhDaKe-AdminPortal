@@ -21,6 +21,7 @@ interface AdminContextType {
   // Orders
   orders: Order[];
   updateOrderStatus: (orderId: string, status: 'Pending' | 'Shipped' | 'Completed') => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
   refreshOrders: () => Promise<void>;
 }
 
@@ -180,6 +181,17 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const deleteOrder = async (orderId: string) => {
+    try {
+      setError(null);
+      await orderService.deleteOrder(orderId);
+      setOrders(prev => prev.filter(order => order._id !== orderId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete order');
+      throw err;
+    }
+  };
+
   const value: AdminContextType = {
     user,
     login,
@@ -194,6 +206,7 @@ export const AdminProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refreshProducts,
     orders,
     updateOrderStatus,
+    deleteOrder,
     refreshOrders
   };
 

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
 import type { OrderStatus } from '../types';
+import '../styles/orders.css';
 
 const Orders: React.FC = () => {
-  const { orders, updateOrderStatus } = useAdmin();
+  const { orders, updateOrderStatus, deleteOrder } = useAdmin();
   const [statusFilter, setStatusFilter] = useState<OrderStatus | 'All'>('All');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  
   const filteredOrders = orders.filter(order => {
     const matchesStatus = statusFilter === 'All' || order.status === statusFilter;
     const matchesSearch = 
@@ -20,6 +23,19 @@ const Orders: React.FC = () => {
     updateOrderStatus(orderId, newStatus);
   };
 
+  const handleDeleteOrder = (orderId: string, customerName: string) => {
+    if (window.confirm(`Are you sure you want to delete the order for ${customerName}?`)) {
+      deleteOrder(orderId);
+      if (expandedOrderId === orderId) {
+        setExpandedOrderId(null);
+      }
+    }
+  };
+
+  const toggleOrderExpand = (orderId: string) => {
+    setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
+  };
+
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
       case 'Pending': return '#f59e0b';
@@ -28,6 +44,7 @@ const Orders: React.FC = () => {
       default: return '#6b7280';
     }
   };
+  
   const formatDate = (date: string) => {
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
@@ -93,84 +110,192 @@ const Orders: React.FC = () => {
         </div>
         <div className="stat-item">
           <span className="stat-label">Total Weight:</span>
-          <span className="stat-value">{orders.reduce((sum, order) => sum + (order.totalWeight || 0), 0)}g</span>
+          <span className="stat-value">{orders.reduce((sum, order) => sum + (order.totalWeight || 0), 0)}kg</span>
         </div>
       </div>
 
-      <div className="orders-table">
+      <div className="orders-list">
         {filteredOrders.length === 0 ? (
           <div className="no-orders">
             <p>No orders found matching your criteria.</p>
           </div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Products</th>
-                <th>Shipping</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>            
-            <tbody>
-              {filteredOrders.map((order) => (
-                <tr key={order._id}>
-                  <td className="order-id">#{order._id}</td>
-                  <td className="customer-info">
-                    <div className="customer-name">{order.customerInfo.name}</div>
-                    <div className="customer-email">{order.customerInfo.email}</div>
-                    {order.customerInfo.phone && (
-                      <div className="customer-phone">{order.customerInfo.phone}</div>
-                    )}
-                  </td>
-                  <td className="products-list">
-                    {order.products.map((item, index) => (
-                      <div key={index} className="product-item">
-                        <span className="product-name">{item.productName}</span>
-                        <span className="product-quantity">x{item.quantity}</span>
-                      </div>
-                    ))}
-                  </td>
-                  <td className="shipping-info">
-                    <div className="shipping-country">🌍 {order.shippingCountry}</div>
-                    <div className="shipping-weight">⚖️ {order.totalWeight / 1000}kg</div>
-                    <div className="shipping-fee">${(order.shippingFee || 0).toFixed(2)}</div>
-                  </td>
-                  <td className="order-total">
-                    <div className="total-breakdown">
-                      <div className="subtotal">Subtotal: ${order.total.toFixed(2)}</div>
-                      <div className="shipping">Shipping: ${(order.shippingFee || 0).toFixed(2)}</div>
-                      <div className="total">Total: ${(order.total + (order.shippingFee || 0)).toFixed(2)}</div>
-                    </div>
-                  </td>
-                  <td>
+          filteredOrders.map((order) => (
+            <div key={order._id} className="order-card">
+              {/* Short View - Always Visible */}
+              <div 
+                className="order-summary" 
+                onClick={() => toggleOrderExpand(order._id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="order-header">
+                  <div className="order-info">
+                    <span className="order-id">#{order._id.slice(-8)}</span>
+                    <span className="order-date">{formatDate(order.createdAt)}</span>
                     <span 
                       className="status-badge"
                       style={{ backgroundColor: getStatusColor(order.status) }}
                     >
                       {order.status}
                     </span>
-                  </td>
-                  <td className="order-date">{formatDate(order.createdAt)}</td>
-                  <td className="order-actions">                    
-                    <select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order._id, e.target.value as OrderStatus)}
-                      className="status-select"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Shipped">Shipped</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <div className="expand-icon">
+                    {expandedOrderId === order._id ? '▼' : '▶'}
+                  </div>
+                </div>
+                
+                <div className="order-summary-content">
+                  <div className="customer-summary">
+                    <strong>{order.customerInfo.name}</strong>
+                    <span className="customer-email">{order.customerInfo.email}</span>
+                  </div>
+                  
+                  <div className="products-summary">
+                    <span className="product-count">{order.products.length} item(s)</span>
+                    <span className="first-product">
+                      {order.products[0]?.productName}
+                      {order.products.length > 1 && ` +${order.products.length - 1} more`}
+                    </span>
+                  </div>
+                  
+                  <div className="shipping-summary">
+                    <span className="shipping-country">🌍 {order.shippingCountry}</span>
+                    <span className="shipping-weight">⚖️ {order.totalWeight}kg</span>
+                  </div>
+                  
+                  <div className="total-summary">
+                    <strong>${(order.total + (order.shippingFee || 0)).toFixed(2)}</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed View - Expandable */}
+              {expandedOrderId === order._id && (
+                <div className="order-details">
+                  <div className="order-details-content">
+                    {/* Left Side - Shipping & Pricing + Delete Button */}
+                    <div className="left-column">
+                      <div className="details-section">
+                        <h4>Shipping & Pricing</h4>
+                        <div className="details-grid">
+                          <div className="detail-item">
+                            <span className="detail-label">Shipping Country:</span>
+                            <span className="detail-value">🌍 {order.shippingCountry}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Total Weight:</span>
+                            <span className="detail-value">⚖️ {order.totalWeight}kg</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Subtotal:</span>
+                            <span className="detail-value">${order.total.toFixed(2)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Shipping Fee:</span>
+                            <span className="detail-value">${(order.shippingFee || 0).toFixed(2)}</span>
+                          </div>
+                          <div className="detail-item total-row">
+                            <span className="detail-label"><strong>Total Amount:</strong></span>
+                            <span className="detail-value"><strong>${(order.total + (order.shippingFee || 0)).toFixed(2)}</strong></span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delete Button */}
+                      <div className="delete-section">
+                        <button 
+                          className="delete-button"
+                          onClick={() => handleDeleteOrder(order._id, order.customerInfo.name)}
+                        >
+                          Delete Order
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Right Side - Order Info + Customer Info + Products */}
+                    <div className="right-column">
+                      <div className="details-section">
+                        <h4>Order Information</h4>
+                        <div className="details-grid">
+                          <div className="detail-item">
+                            <span className="detail-label">Full Order ID:</span>
+                            <span className="detail-value">{order._id}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Created:</span>
+                            <span className="detail-value">{formatDate(order.createdAt)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Last Updated:</span>
+                            <span className="detail-value">{formatDate(order.updatedAt)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Status:</span>
+                            <select
+                              value={order.status}
+                              onChange={(e) => handleStatusChange(order._id, e.target.value as OrderStatus)}
+                              className="status-select-inline"
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Shipped">Shipped</option>
+                              <option value="Completed">Completed</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="details-section">
+                        <h4>Customer Information</h4>
+                        <div className="details-grid">
+                          <div className="detail-item">
+                            <span className="detail-label">Name:</span>
+                            <span className="detail-value">{order.customerInfo.name}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Email:</span>
+                            <span className="detail-value">{order.customerInfo.email}</span>
+                          </div>
+                          {order.customerInfo.phone && (
+                            <div className="detail-item">
+                              <span className="detail-label">Phone:</span>
+                              <span className="detail-value">{order.customerInfo.phone}</span>
+                            </div>
+                          )}
+                          <div className="detail-item full-width">
+                            <span className="detail-label">Address:</span>
+                            <span className="detail-value">{order.customerInfo.address}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="details-section">
+                        <h4>Products</h4>
+                        <div className="products-detail-scrollable">
+                          {order.products.map((item, index) => (
+                            <div key={index} className="product-detail-item">
+                              <div className="product-main-info">
+                                <span className="product-name">{item.productName}</span>
+                                <span className="product-id">ID: {(item.productId as any)?._id || item.productId}</span>
+                              </div>
+                              <div className="product-options">
+                                <span className="product-color">Color: {item.selectedColor}</span>
+                                <span className="product-size">Size: {item.selectedSize}</span>
+                                <span className="product-quantity">Qty: {item.quantity}</span>
+                              </div>
+                              <div className="product-price">
+                                <span className="unit-price">${item.price.toFixed(2)} each</span>
+                                <span className="total-price">${(item.price * item.quantity).toFixed(2)}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
     </div>

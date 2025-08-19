@@ -727,7 +727,8 @@ const ManageProducts: React.FC = () => {
 
       <div className="products-grid">
         {filteredProducts.map((product) => (
-          <div key={product._id} className="product-card">            <div className="product-image">
+          <div key={product._id} className="product-card">            
+          <div className="product-image">
               {product.image ? (
                 <img src={product.image} alt={getLocalizedString(product.name)} />
               ) : (
