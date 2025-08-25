@@ -18,8 +18,6 @@ interface EditProductModalProps {
 
 const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, onSave }) => {
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'vi'>('en');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modalError, setModalError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nameEn: product.name.en,
     nameVi: product.name.vi,
@@ -62,8 +60,11 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
       : [{ colorEn: '', colorVi: '', image: '', sizeOptions: [{ size: '', price: '', stock: '' }] }]
   );
 
-  // Track which variations are collapsed
+  // Track which variations, size options are collapsed
   const [collapsedVariations, setCollapsedVariations] = useState<boolean[]>(
+    new Array(variations.length).fill(true)
+  );
+  const [collapsedSizeOptions, setCollapsedSizeOptions] = useState<boolean[]>(
     new Array(variations.length).fill(true)
   );
 
@@ -81,7 +82,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
   });
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setModalError(null); // Clear any existing errors when user makes changes
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
@@ -91,7 +91,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
   };
 
   const handleVariationChange = (index: number, field: keyof FormVariation, value: string) => {
-    setModalError(null); // Clear any existing errors when user makes changes
     setVariations(prev => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: value };
@@ -100,7 +99,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
   };
 
   const handleSizeOptionChange = (variationIndex: number, sizeIndex: number, field: keyof FormSizeOption, value: string) => {
-    setModalError(null); // Clear any existing errors when user makes changes
     setVariations(prev => {
       const copy = [...prev];
       const sizeOptions = [...copy[variationIndex].sizeOptions];
@@ -152,10 +150,21 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
       copy[index] = !copy[index];
       return copy;
     });
+    setCollapsedSizeOptions(prev => {
+      const copy = [...prev];
+      copy[index] = true;
+      return copy;
+    });
+  };
+  const toggleSizeOptionsCollapse = (index: number) => {
+    setCollapsedSizeOptions(prev => {
+      const copy = [...prev];
+      copy[index] = !copy[index];
+      return copy;
+    });
   };
 
   const handleSpecificationChange = (index: number, field: keyof SpecificationItem, value: string) => {
-    setModalError(null); // Clear any existing errors when user makes changes
     setSpecifications(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -172,76 +181,96 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
       setSpecifications(prev => prev.filter((_, i) => i !== index));
     }
   };
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setModalError(null);
     
-    try {
-      // Convert specifications to the required format
-      const specificationsArray = specifications
-        .filter(spec => spec.keyEn.trim() || spec.keyVi.trim()) // Only include specifications with at least one key
-        .map(spec => ({
-          key: createLocalizedString(spec.keyEn || spec.keyVi, spec.keyVi || spec.keyEn),
-          value: createLocalizedString(spec.valueEn || spec.valueVi, spec.valueVi || spec.valueEn)
-        }));
+    // Convert specifications to the required format
+    const specificationsArray = specifications
+      .filter(spec => spec.keyEn.trim() || spec.keyVi.trim()) // Only include specifications with at least one key
+      .map(spec => ({
+        key: createLocalizedString(spec.keyEn || spec.keyVi, spec.keyVi || spec.keyEn),
+        value: createLocalizedString(spec.valueEn || spec.valueVi, spec.valueVi || spec.valueEn)
+      }));
 
-      // Parse images array from textarea (one URL per line)
-      const imagesArray = formData.images
-        .split('\n')
-        .map(url => url.trim())
-        .filter(url => url);
+    // Parse images array from textarea (one URL per line)
+    const imagesArray = formData.images
+      .split('\n')
+      .map(url => url.trim())
+      .filter(url => url);
 
-      // Use first image as main image, fallback to existing main image
-      const mainImage = imagesArray.length > 0 ? imagesArray[0] : formData.image;
+    // Use first image as main image, fallback to existing main image
+    const mainImage = imagesArray.length > 0 ? imagesArray[0] : formData.image;
 
-      const variationPayload: ProductVariation[] = variations
-        .filter(v => (v.colorEn || v.colorVi) && v.sizeOptions.some((so: FormSizeOption) => so.size.trim() !== ''))
-        .map(v => ({
-          color: createLocalizedString(v.colorEn || v.colorVi, v.colorVi || v.colorEn),
-          image: v.image,
-          sizeOptions: v.sizeOptions
-            .filter((so: FormSizeOption) => so.size.trim() !== '')
-            .map((so: FormSizeOption) => ({
-              size: parseFloat(so.size) || 0,
-              price: parseFloat(so.price) || 0,
-              stock: parseInt(so.stock) || 0,
-            }))
-        }));
+    const variationPayload: ProductVariation[] = variations
+      .filter(v => (v.colorEn || v.colorVi) && v.sizeOptions.some((so: FormSizeOption) => so.size.trim() !== ''))
+      .map(v => ({
+        color: createLocalizedString(v.colorEn || v.colorVi, v.colorVi || v.colorEn),
+        image: v.image || '',
+        sizeOptions: v.sizeOptions
+          .filter((so: FormSizeOption) => so.size.trim() !== '')
+          .map((so: FormSizeOption) => ({
+            size: parseFloat(so.size) || 0,
+            price: parseFloat(so.price) || 0,
+            stock: parseInt(so.stock) || 0,
+          }))
+      }));
 
-      const updates: Partial<Product> = {
-        name: createLocalizedString(formData.nameEn, formData.nameVi),
-        shortDescription: createLocalizedString(formData.shortDescriptionEn, formData.shortDescriptionVi),
-        detailDescription: createLocalizedString(formData.detailDescriptionEn, formData.detailDescriptionVi),//optional
-        image: mainImage,
-        images: imagesArray.length > 0 ? imagesArray : [formData.image],
-        inStock: formData.inStock,
-        specifications: specificationsArray,
-        weight: parseFloat(formData.weight) || 0,
-        variations: variationPayload,
+    const updates: Partial<Product> = {
+      name: createLocalizedString(formData.nameEn, formData.nameVi),
+      detailDescription: createLocalizedString(formData.detailDescriptionEn, formData.detailDescriptionVi),
+      image: mainImage,
+      images: imagesArray.length > 0 ? imagesArray : [formData.image],
+      inStock: formData.inStock,
+      specifications: specificationsArray,
+      weight: parseFloat(formData.weight) || 0,
+      variations: variationPayload,
+    };
+    // Only include shortDescription if provided
+    if (formData.shortDescriptionEn.trim() || formData.shortDescriptionVi.trim()) {
+      (updates as any).shortDescription = createLocalizedString(formData.shortDescriptionEn, formData.shortDescriptionVi);
+    }
+
+    onSave(product._id, updates);
+    onClose();
+  };
+
+   // Duplicate a variation (deep copy)
+  const duplicateVariation = (variationIndex: number) => {
+    setVariations(prev => {
+      const toCopy = prev[variationIndex];
+      // Deep copy sizeOptions
+      const copiedSizeOptions = toCopy.sizeOptions.map(so => ({ ...so }));
+      // Add 'Copy' to color fields to indicate duplication
+      const newVariation = {
+        ...toCopy,
+        colorEn: toCopy.colorEn ? `${toCopy.colorEn} (Copy)` : '',
+        colorVi: toCopy.colorVi ? `${toCopy.colorVi} (Copy)` : '',
+        sizeOptions: copiedSizeOptions,
+        image: toCopy.image
       };
+      // Insert after the original
+      const newArr = [...prev];
+      newArr.splice(variationIndex + 1, 0, newVariation);
+      return newArr;
+    });
+    setCollapsedVariations(prev => {
+      const newArr = [...prev];
+      newArr.splice(variationIndex + 1, 0, true); // New duplicated variation starts expanded
+      return newArr;
+    })
+  };
 
-      await onSave(product._id, updates);
-      onClose();
-    } catch (error: any) {
-      console.error('Error updating product:', error);
-      if (error.response && error.response.data) {
-        // Handle validation errors from backend
-        if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
-          const errorMessages = error.response.data.errors.map((err: any) => err.msg || err.message).join(', ');
-          setModalError(`Validation errors: ${errorMessages}`);
-        } else if (error.response.data.error) {
-          setModalError(error.response.data.error);
-        } else {
-          setModalError('Failed to update product. Please check your input and try again.');
-        }
-      } else if (error.message) {
-        setModalError(error.message);
-      } else {
-        setModalError('Failed to update product. Please try again.');
-      }
-    } finally {
-      setIsSubmitting(false);
+  // State for bulk price input per variation
+  const [bulkPrices, setBulkPrices] = useState<{ [variationIdx: number]: string }>({});
+
+  // Set all prices in a variation
+  const setAllPricesInVariation = (variationIdx: number) => {
+    const price = bulkPrices[variationIdx];
+    if (price !== undefined && price !== '') {
+      setVariations(prev => prev.map((v, idx) => idx === variationIdx ? {
+        ...v,
+        sizeOptions: v.sizeOptions.map(so => ({ ...so, price: price }))
+      } : v));
     }
   };
 
@@ -270,12 +299,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
               Vietnamese
             </button>
           </div>
-
-          {modalError && (
-            <div className="error-message">
-              ❌ {modalError}
-            </div>
-          )}
           
           <div className="form-row">
             <div className="form-group">
@@ -401,6 +424,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                       {variations.length > 1 && (
                         <button type="button" className="remove-spec-btn" onClick={() => removeVariation(index)}>✕</button>
                       )}
+                      <button type="button" className="duplicate-spec-btn" onClick={() => duplicateVariation(index)} title="Duplicate Variation">⧉</button>
                     </div>
                   </div>
                   
@@ -449,7 +473,35 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                       </div>
                       
                       {/* Size Options - Sub-group */}
+                      <div 
+                        className="size-options-header" 
+                        onClick={() => toggleSizeOptionsCollapse(index)} 
+                        style={{ cursor: 'pointer', marginTop: '12px', color: '#007bff', fontWeight: 'bold', textDecoration: 'underline' }}
+                      >
+                        <span>{collapsedSizeOptions[index] ? 'Show' : 'Hide'} Size Options</span>
+                      </div>
+                      {!collapsedSizeOptions[index] && (
                       <div className="size-options-section">
+                        <div className="bulk-price-update">
+                          <input
+                          type="number"
+                          min="0"
+                          placeholder="New price"
+                          value={bulkPrices[index] || ''}
+                          onChange={e => setBulkPrices(prev => ({...prev, [index]: e.target.value}))}
+                          style={{ marginRight: '8px', width: '120px' }}
+                          />
+                          <button
+                          type="button"
+                          onClick={() => {
+                            setAllPricesInVariation(index);
+                            setBulkPrices(prev => ({...prev, [index]: ''}));
+                          }}
+                          style={{ padding: '4px 10px' }}
+                          >
+                          Set All Price
+                          </button>
+                        </div>
                         <label>Size Options</label>
                         {v.sizeOptions.map((so: FormSizeOption, sizeIndex: number) => (
                           <div key={sizeIndex} className="size-option-item">
@@ -469,7 +521,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                                 <input 
                                   type="number" 
                                   min="0" 
-                                  step="0.01" 
                                   value={so.price} 
                                   onChange={(e) => handleSizeOptionChange(index, sizeIndex, 'price', e.target.value)} 
                                   onWheel={(e) => e.currentTarget.blur()}
@@ -507,25 +558,12 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                           + Add Size Option
                         </button>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
               ))}
               <button type="button" className="add-spec-btn" onClick={addVariation}>+ Add Variation</button>
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="inStock"
-                  checked={formData.inStock}
-                  onChange={handleChange}
-                />
-                In Stock
-              </label>
             </div>
           </div>
 
@@ -606,11 +644,11 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
           </div>
 
           <div className="modal-actions">
-            <button type="button" onClick={onClose} className="cancel-button" disabled={isSubmitting}>
+            <button type="button" onClick={onClose} className="cancel-button">
               Cancel
             </button>
-            <button type="submit" className="save-button" disabled={isSubmitting}>
-              {isSubmitting ? 'Saving...' : 'Save Changes'}
+            <button type="submit" className="save-button">
+              Save Changes
             </button>
           </div>
         </form>
@@ -623,8 +661,6 @@ const ManageProducts: React.FC = () => {
   const { products, updateProduct, deleteProduct } = useAdmin();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const filteredProducts = products.filter(product =>
   getLocalizedString(product.name, 'en').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -637,57 +673,13 @@ const ManageProducts: React.FC = () => {
     setEditingProduct(product);
   };
 
-  const handleSave = async (id: string, updates: Partial<Product>) => {
-    try {
-      setError(null);
-      await updateProduct(id, updates);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (error: any) {
-      console.error('Error updating product:', error);
-      if (error.response && error.response.data) {
-        // Handle validation errors from backend
-        if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
-          const errorMessages = error.response.data.errors.map((err: any) => err.msg || err.message).join(', ');
-          setError(`Validation errors: ${errorMessages}`);
-        } else if (error.response.data.error) {
-          setError(error.response.data.error);
-        } else {
-          setError('Failed to update product. Please check your input and try again.');
-        }
-      } else if (error.message) {
-        setError(error.message);
-      } else {
-        setError('Failed to update product. Please try again.');
-      }
-    }
+  const handleSave = (id: string, updates: Partial<Product>) => {
+    updateProduct(id, updates);
   };
 
-  const handleDelete = async (id: string, productName: string) => {
+  const handleDelete = (id: string, productName: string) => {
     if (window.confirm(`Are you sure you want to delete "${productName}"?`)) {
-      try {
-        setError(null);
-        await deleteProduct(id);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
-      } catch (error: any) {
-        console.error('Error deleting product:', error);
-        if (error.response && error.response.data) {
-          // Handle validation errors from backend
-          if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
-            const errorMessages = error.response.data.errors.map((err: any) => err.msg || err.message).join(', ');
-            setError(`Validation errors: ${errorMessages}`);
-          } else if (error.response.data.error) {
-            setError(error.response.data.error);
-          } else {
-            setError('Failed to delete product. Please try again.');
-          }
-        } else if (error.message) {
-          setError(error.message);
-        } else {
-          setError('Failed to delete product. Please try again.');
-        }
-      }
+      deleteProduct(id);
     }
   };
 
@@ -697,18 +689,6 @@ const ManageProducts: React.FC = () => {
         <h1>Manage Products</h1>
         <p>View, edit, and delete your products</p>
       </div>
-
-      {success && (
-        <div className="success-message">
-          ✅ Operation completed successfully!
-        </div>
-      )}
-
-      {error && (
-        <div className="error-message">
-          ❌ {error}
-        </div>
-      )}
 
       <div className="products-controls">
         <div className="search-bar">
@@ -727,8 +707,7 @@ const ManageProducts: React.FC = () => {
 
       <div className="products-grid">
         {filteredProducts.map((product) => (
-          <div key={product._id} className="product-card">            
-          <div className="product-image">
+          <div key={product._id} className="product-card">            <div className="product-image">
               {product.image ? (
                 <img src={product.image} alt={getLocalizedString(product.name)} />
               ) : (
@@ -804,3 +783,4 @@ const ManageProducts: React.FC = () => {
 };
 
 export default ManageProducts;
+
