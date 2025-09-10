@@ -71,6 +71,10 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
         })
       }));
       setVariations(initialVariations);
+      
+      // Update collapsed states to match the new variations length
+      setCollapsedVariations(new Array(initialVariations.length).fill(true));
+      setCollapsedSizeOptions(new Array(initialVariations.length).fill(true));
     }
   }, [availableSizes, product.variations]);
 
