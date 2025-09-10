@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
-import type { Product, ProductVariation } from '../types';
+import { sizeService } from '../services/api';
+import type { Product, ProductVariation, SizeOption } from '../types';
 import { getLocalizedString, createLocalizedString } from '../types';
 
 interface SpecificationItem {
@@ -18,6 +19,7 @@ interface EditProductModalProps {
 
 const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, onSave }) => {
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'vi'>('en');
+  const [availableSizes, setAvailableSizes] = useState<SizeOption[]>([]);
   const [formData, setFormData] = useState({
     nameEn: product.name.en,
     nameVi: product.name.vi,
@@ -33,7 +35,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
 
   // Form-specific types (string values for input controls)
   interface FormSizeOption {
-    size: string;
+    sizeOptionId: string; // ID of the selected size option from dropdown
     price: string;
     stock: string;
   }
@@ -45,20 +47,32 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
     sizeOptions: FormSizeOption[];
   }
 
-  const [variations, setVariations] = useState<FormVariation[]>(
-    (product.variations && product.variations.length > 0)
-      ? product.variations.map(v => ({
-          colorEn: v.color.en,
-          colorVi: v.color.vi,
-          image: v.image || '',
-          sizeOptions: v.sizeOptions.map(so => ({
-            size: so.size.toString(),
+  const [variations, setVariations] = useState<FormVariation[]>([
+    { colorEn: '', colorVi: '', image: '', sizeOptions: [{ sizeOptionId: '', price: '', stock: '' }] }
+  ]);
+
+  // Initialize variations after sizes are loaded
+  useEffect(() => {
+    if (availableSizes.length > 0 && product.variations && product.variations.length > 0) {
+      const initialVariations = product.variations.map(v => ({
+        colorEn: v.color.en,
+        colorVi: v.color.vi,
+        image: v.image || '',
+        sizeOptions: v.sizeOptions.map(so => {
+          // Find the matching size option from available sizes based on EU and US values
+          const matchingSizeOption = availableSizes.find(size => 
+            size.EU === so.size.EU && size.US === so.size.US
+          );
+          return {
+            sizeOptionId: matchingSizeOption?._id || '',
             price: so.price.toString(),
             stock: so.stock.toString()
-          }))
-        }))
-      : [{ colorEn: '', colorVi: '', image: '', sizeOptions: [{ size: '', price: '', stock: '' }] }]
-  );
+          };
+        })
+      }));
+      setVariations(initialVariations);
+    }
+  }, [availableSizes, product.variations]);
 
   // Track which variations, size options are collapsed
   const [collapsedVariations, setCollapsedVariations] = useState<boolean[]>(
@@ -67,6 +81,134 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
   const [collapsedSizeOptions, setCollapsedSizeOptions] = useState<boolean[]>(
     new Array(variations.length).fill(true)
   );
+
+  // Fetch available sizes on component mount
+  useEffect(() => {
+    const fetchSizes = async () => {
+      try {
+        const sizes = await sizeService.getAllSizes();
+        setAvailableSizes(sizes);
+      } catch (error) {
+        console.error('Failed to fetch sizes:', error);
+      }
+    };
+    
+    fetchSizes();
+  }, []);
+
+  // SearchableSelect component for size selection
+  interface SearchableSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+    placeholder?: string;
+  }
+
+  const SearchableSelect: React.FC<SearchableSelectProps> = ({ 
+    value, 
+    onChange, 
+    options, 
+    placeholder = "Select..." 
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const selectRef = useRef<HTMLDivElement>(null);
+
+    const filteredOptions = options.filter(option =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const selectedOption = options.find(option => option.value === value);
+    const displayValue = selectedOption ? selectedOption.label : '';
+
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
+          setIsOpen(false);
+          setSearchTerm('');
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      setSearchTerm(e.target.value);
+      setIsOpen(true);
+    };
+
+    const handleOptionSelect = (optionValue: string) => {
+      onChange(optionValue);
+      setIsOpen(false);
+      setSearchTerm('');
+    };
+
+    const handleClear = () => {
+      onChange('');
+      setSearchTerm('');
+      setIsOpen(false);
+    };
+
+    const toggleDropdown = () => {
+      setIsOpen(!isOpen);
+      if (!isOpen) {
+        setSearchTerm('');
+      }
+    };
+
+    return (
+      <div className="searchable-select" ref={selectRef}>
+        <div className="searchable-select-input-container">
+          <input
+            type="text"
+            className="searchable-select-input"
+            value={isOpen ? searchTerm : displayValue}
+            onChange={handleInputChange}
+            onClick={() => setIsOpen(true)}
+            placeholder={placeholder}
+          />
+          {value && (
+            <button
+              type="button"
+              className="searchable-select-clear"
+              onClick={handleClear}
+            >
+              ×
+            </button>
+          )}
+          <button
+            type="button"
+            className="searchable-select-arrow"
+            onClick={toggleDropdown}
+          >
+            {isOpen ? '▲' : '▼'}
+          </button>
+        </div>
+        {isOpen && (
+          <div className="searchable-select-dropdown">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(option => (
+                <div
+                  key={option.value}
+                  className="searchable-select-option"
+                  onClick={() => handleOptionSelect(option.value)}
+                >
+                  {option.label}
+                </div>
+              ))
+            ) : (
+              <div className="searchable-select-no-results">
+                No results found
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Initialize specifications from product data
   const [specifications, setSpecifications] = useState<SpecificationItem[]>(() => {
@@ -113,7 +255,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
       const copy = [...prev];
       copy[variationIndex] = {
         ...copy[variationIndex],
-        sizeOptions: [...copy[variationIndex].sizeOptions, { size: '', price: '', stock: '' }]
+        sizeOptions: [...copy[variationIndex].sizeOptions, { sizeOptionId: '', price: '', stock: '' }]
       };
       return copy;
     });
@@ -133,7 +275,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
   };
 
   const addVariation = () => {
-    setVariations(prev => [...prev, { colorEn: '', colorVi: '', image: '', sizeOptions: [{ size: '', price: '', stock: '' }] }]);
+    setVariations(prev => [...prev, { colorEn: '', colorVi: '', image: '', sizeOptions: [{ sizeOptionId: '', price: '', stock: '' }] }]);
     setCollapsedVariations(prev => [...prev, false]); // New variations start expanded
   };
 
@@ -202,17 +344,23 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
     const mainImage = imagesArray.length > 0 ? imagesArray[0] : formData.image;
 
     const variationPayload: ProductVariation[] = variations
-      .filter(v => (v.colorEn || v.colorVi) && v.sizeOptions.some((so: FormSizeOption) => so.size.trim() !== ''))
+      .filter(v => (v.colorEn || v.colorVi) && v.sizeOptions.some((so: FormSizeOption) => so.sizeOptionId.trim() !== ''))
       .map(v => ({
         color: createLocalizedString(v.colorEn || v.colorVi, v.colorVi || v.colorEn),
         image: v.image || '',
         sizeOptions: v.sizeOptions
-          .filter((so: FormSizeOption) => so.size.trim() !== '')
-          .map((so: FormSizeOption) => ({
-            size: parseFloat(so.size) || 0,
-            price: parseFloat(so.price) || 0,
-            stock: parseInt(so.stock) || 0,
-          }))
+          .filter((so: FormSizeOption) => so.sizeOptionId.trim() !== '')
+          .map((so: FormSizeOption) => {
+            const sizeOption = availableSizes.find(size => size._id === so.sizeOptionId);
+            return {
+              size: {
+                EU: sizeOption!.EU,
+                US: sizeOption!.US
+              },
+              price: parseFloat(so.price) || 0,
+              stock: parseInt(so.stock) || 0,
+            };
+          })
       }));
 
     const updates: Partial<Product> = {
@@ -508,12 +656,14 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ product, onClose, o
                             <div className="spec-row">
                               <div className="spec-field">
                                 <label>Size</label>
-                                <input 
-                                  type="number" 
-                                  value={so.size} 
-                                  onChange={(e) => handleSizeOptionChange(index, sizeIndex, 'size', e.target.value)} 
-                                  onWheel={(e) => e.currentTarget.blur()}
-                                  placeholder="e.g., 38" 
+                                <SearchableSelect
+                                  value={so.sizeOptionId}
+                                  onChange={(value) => handleSizeOptionChange(index, sizeIndex, 'sizeOptionId', value)}
+                                  options={availableSizes.map(size => ({
+                                    value: size._id,
+                                    label: `EU ${size.EU} / US ${size.US}`
+                                  }))}
+                                  placeholder="Select Size"
                                 />
                               </div>
                               <div className="spec-field">

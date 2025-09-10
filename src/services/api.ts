@@ -1,5 +1,5 @@
 import { apiRequest, API_CONFIG } from '../config/api';
-import type { Product, ShippingFee } from '../types';
+import type { Product, ShippingFee, SizeOption } from '../types';
 
 // Auth API services
 export const authService = {
@@ -146,5 +146,39 @@ export const shippingService = {
       method: 'PATCH',
     });
     return response.data;
+  },
+};
+
+// Size API services
+export const sizeService = {
+  // Get all sizes
+  getAllSizes: async (): Promise<SizeOption[]> => {
+    const response = await apiRequest(API_CONFIG.ENDPOINTS.SIZES);
+    return response.data || [];
+  },
+
+  // Create new size
+  createSize: async (sizeData: Omit<SizeOption, '_id'>): Promise<SizeOption> => {
+    const response = await apiRequest(API_CONFIG.ENDPOINTS.SIZES, {
+      method: 'POST',
+      body: JSON.stringify(sizeData),
+    });
+    return response.data;
+  },
+
+  // Update size
+  updateSize: async (id: string, sizeData: Partial<Omit<SizeOption, '_id'>>): Promise<SizeOption> => {
+    const response = await apiRequest(`${API_CONFIG.ENDPOINTS.SIZES}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(sizeData),
+    });
+    return response.data;
+  },
+
+  // Delete size
+  deleteSize: async (id: string): Promise<void> => {
+    await apiRequest(`${API_CONFIG.ENDPOINTS.SIZES}/${id}`, {
+      method: 'DELETE',
+    });
   },
 };

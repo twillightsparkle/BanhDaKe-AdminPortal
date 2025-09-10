@@ -8,6 +8,12 @@ export type ProductSpecification = {
   value: LocalizedString;
 };
 
+export type SizeOption = {
+  _id: string;
+  EU: number;
+  US: number;
+};
+
 export interface Product {
   _id: string; // MongoDB ObjectId as string
   name: LocalizedString;
@@ -24,7 +30,10 @@ export interface Product {
 }
 
 export interface ProductVariationSizeOption {
-  size: number;
+  size: {
+    EU: number;
+    US: number;
+  };
   price: number;
   stock: number;
 }

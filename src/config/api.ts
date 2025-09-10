@@ -7,7 +7,8 @@ export const API_CONFIG = {
     ORDERS: '/orders',
     AUTH: '/auth',
     SHIPPING: '/shipping',
-    HEALTH: '/health'
+    HEALTH: '/health',
+    SIZES: '/sizes'
   }
 };
 

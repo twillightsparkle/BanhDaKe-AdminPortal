@@ -279,7 +279,7 @@ const Orders: React.FC = () => {
                               </div>
                               <div className="product-options">
                                 <span className="product-color">Color: {item.selectedColor}</span>
-                                <span className="product-size">Size: {item.selectedSize}</span>
+                                <span className="product-size">Size: EU {JSON.parse(item.selectedSize).EU}</span>
                                 <span className="product-quantity">Qty: {item.quantity}</span>
                               </div>
                               <div className="product-price">

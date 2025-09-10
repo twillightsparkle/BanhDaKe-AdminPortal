@@ -34,7 +34,7 @@ const StockManagement: React.FC = () => {
             sizeOptionIndex,
             stock: sizeOption.stock,
             color: getLocalizedString(variation.color),
-            size: sizeOption.size,
+            size: sizeOption.size.EU,
             price: sizeOption.price,
             productName: getLocalizedString(product.name)
           });
@@ -215,7 +215,7 @@ const StockManagement: React.FC = () => {
             <tr>
               <th>Product</th>
               <th>Variation</th>
-              <th>Size</th>
+              <th>Size (EU)</th>
               <th>Price</th>
               <th>Current Stock</th>
               <th>Status</th>

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAdmin } from '../contexts/AdminContext';
+import { sizeService } from '../services/api';
+import type { SizeOption } from '../types';
 import '../styles/specifications.css';
 
 interface FormData {
@@ -30,10 +32,145 @@ interface FormVariation {
 }
 
 interface FormSizeOption {
-  size: string;
+  sizeOptionId: string;
   price: string;
   stock: string;
 }
+
+// Searchable Select Component
+interface SearchableSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: SizeOption[];
+  placeholder?: string;
+}
+
+const SearchableSelect: React.FC<SearchableSelectProps> = ({ value, onChange, options, placeholder = "Select Size" }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [displayValue, setDisplayValue] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Set display value based on selected option
+  useEffect(() => {
+    if (value) {
+      const selectedOption = options.find(option => option._id === value);
+      if (selectedOption) {
+        setDisplayValue(`EU ${selectedOption.EU} / US ${selectedOption.US}`);
+      }
+    } else {
+      setDisplayValue('');
+    }
+  }, [value, options]);
+
+  // Filter options based on search term
+  const filteredOptions = options.filter(option => {
+    const searchString = `EU ${option.EU} / US ${option.US}`;
+    return searchString.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  // Handle input focus
+  const handleInputFocus = () => {
+    setIsOpen(true);
+    setSearchTerm('');
+  };
+
+  // Handle input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setDisplayValue(e.target.value);
+    setIsOpen(true);
+  };
+
+  // Handle option selection
+  const handleOptionSelect = (option: SizeOption) => {
+    onChange(option._id);
+    setDisplayValue(`EU ${option.EU} / US ${option.US}`);
+    setSearchTerm('');
+    setIsOpen(false);
+  };
+
+  // Handle input blur
+  const handleInputBlur = () => {
+    // Delay closing to allow option selection
+    setTimeout(() => {
+      setIsOpen(false);
+      // Reset display value if no valid selection
+      if (value) {
+        const selectedOption = options.find(option => option._id === value);
+        if (selectedOption) {
+          setDisplayValue(`EU ${selectedOption.EU} / US ${selectedOption.US}`);
+        }
+      } else {
+        setDisplayValue('');
+      }
+      setSearchTerm('');
+    }, 200);
+  };
+
+  // Handle clear selection
+  const handleClear = () => {
+    onChange('');
+    setDisplayValue('');
+    setSearchTerm('');
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="searchable-select" ref={containerRef}>
+      <div className="searchable-select-input-container">
+        <input
+          type="text"
+          value={isOpen ? searchTerm : displayValue}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          placeholder={placeholder}
+          className="searchable-select-input"
+        />
+        {value && (
+          <button
+            type="button"
+            className="searchable-select-clear"
+            onClick={handleClear}
+            onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+          >
+            ×
+          </button>
+        )}
+        <button
+          type="button"
+          className="searchable-select-arrow"
+          onClick={() => setIsOpen(!isOpen)}
+          onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+        >
+          {isOpen ? '▲' : '▼'}
+        </button>
+      </div>
+      
+      {isOpen && (
+        <div className="searchable-select-dropdown">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option) => (
+              <div
+                key={option._id}
+                className="searchable-select-option"
+                onMouseDown={(e) => e.preventDefault()} // Prevent input blur
+                onClick={() => handleOptionSelect(option)}
+              >
+                EU {option.EU} / US {option.US}
+              </div>
+            ))
+          ) : (
+            <div className="searchable-select-no-results">
+              No sizes found
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AddProduct: React.FC = () => {
   const { addProduct } = useAdmin();
@@ -41,6 +178,7 @@ const AddProduct: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentLanguage, setCurrentLanguage] = useState<'en' | 'vi'>('en');
+  const [availableSizes, setAvailableSizes] = useState<SizeOption[]>([]);
 
   const [formData, setFormData] = useState<FormData>({
     nameEn: '',
@@ -60,10 +198,24 @@ const AddProduct: React.FC = () => {
   ]);
 
   const [variations, setVariations] = useState<FormVariation[]>([
-    { colorEn: '', colorVi: '', image: '', sizeOptions: [{ size: '', price: '', stock: '' }] }
+    { colorEn: '', colorVi: '', image: '', sizeOptions: [{ sizeOptionId: '', price: '', stock: '' }] }
   ]);
 
   const [collapsedVariations, setCollapsedVariations] = useState<boolean[]>([false]);
+
+  // Fetch available sizes on component mount
+  useEffect(() => {
+    const fetchSizes = async () => {
+      try {
+        const sizes = await sizeService.getAllSizes();
+        setAvailableSizes(sizes);
+      } catch (error) {
+        console.error('Failed to fetch sizes:', error);
+      }
+    };
+    
+    fetchSizes();
+  }, []);
 
   const createLocalizedString = (en: string, vi: string) => ({ en, vi });
 
@@ -117,7 +269,7 @@ const AddProduct: React.FC = () => {
   };
 
   const addVariation = () => {
-    setVariations(prev => [...prev, { colorEn: '', colorVi: '', image: '', sizeOptions: [{ size: '', price: '', stock: '' }] }]);
+    setVariations(prev => [...prev, { colorEn: '', colorVi: '', image: '', sizeOptions: [{ sizeOptionId: '', price: '', stock: '' }] }]);
     setCollapsedVariations(prev => [...prev, false]);
   };
 
@@ -132,13 +284,11 @@ const AddProduct: React.FC = () => {
     setVariations(prev => 
       prev.map((variation, i) => 
         i === variationIndex 
-          ? { ...variation, sizeOptions: [...variation.sizeOptions, { size: '', price: '', stock: '' }] }
+          ? { ...variation, sizeOptions: [...variation.sizeOptions, { sizeOptionId: '', price: '', stock: '' }] } 
           : variation
       )
     );
-  };
-
-  const removeSizeOption = (variationIndex: number, sizeIndex: number) => {
+  };  const removeSizeOption = (variationIndex: number, sizeIndex: number) => {
     setVariations(prev => 
       prev.map((variation, i) => 
         i === variationIndex 
@@ -180,17 +330,23 @@ const AddProduct: React.FC = () => {
 
       // Convert variations to the required format
       const variationPayload = variations
-        .filter(v => (v.colorEn || v.colorVi) && v.sizeOptions.some((so: FormSizeOption) => so.size.trim() !== ''))
+        .filter(v => (v.colorEn || v.colorVi) && v.sizeOptions.some((so: FormSizeOption) => so.sizeOptionId.trim() !== ''))
         .map(v => ({
           color: createLocalizedString(v.colorEn || v.colorVi, v.colorVi || v.colorEn),
           image: v.image,
           sizeOptions: v.sizeOptions
-            .filter((so: FormSizeOption) => so.size.trim() !== '')
-            .map((so: FormSizeOption) => ({
-              size: parseFloat(so.size) || 0,
-              price: parseFloat(so.price) || 0,
-              stock: parseInt(so.stock) || 0,
-            }))
+            .filter((so: FormSizeOption) => so.sizeOptionId.trim() !== '')
+            .map((so: FormSizeOption) => {
+              const sizeOption = availableSizes.find(size => size._id === so.sizeOptionId);
+              return {
+                size: {
+                  EU: sizeOption!.EU,
+                  US: sizeOption!.US
+                },
+                price: parseFloat(so.price) || 0,
+                stock: parseInt(so.stock) || 0,
+              };
+            })
         }));
 
       await addProduct({
@@ -222,7 +378,7 @@ const AddProduct: React.FC = () => {
       });
       
       // Reset variations and specifications
-      setVariations([{ colorEn: '', colorVi: '', image: '', sizeOptions: [{ size: '', price: '', stock: '' }] }]);
+      setVariations([{ colorEn: '', colorVi: '', image: '', sizeOptions: [{ sizeOptionId: '', price: '', stock: '' }] }]);
       setCollapsedVariations([false]);
       setSpecifications([{ keyEn: '', keyVi: '', valueEn: '', valueVi: '' }]);
 
@@ -412,12 +568,11 @@ const AddProduct: React.FC = () => {
                     <label>Size Options *</label>
                     {variation.sizeOptions.map((sizeOption, sizeIndex) => (
                       <div key={sizeIndex} className="size-option">
-                        <input
-                          type="number"
-                          placeholder="Size"
-                          value={sizeOption.size}
-                          onChange={(e) => handleSizeOptionChange(index, sizeIndex, 'size', e.target.value)}
-                          onWheel={(e) => e.currentTarget.blur()}
+                        <SearchableSelect
+                          value={sizeOption.sizeOptionId}
+                          onChange={(value) => handleSizeOptionChange(index, sizeIndex, 'sizeOptionId', value)}
+                          options={availableSizes}
+                          placeholder="Select Size"
                         />
                         <input
                           type="number"
